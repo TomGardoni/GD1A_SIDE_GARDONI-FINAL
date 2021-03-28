@@ -1,0 +1,338 @@
+<!doctype html> 
+<html lang="en"> 
+<head> 
+    <meta charset="UTF-8" />
+    <title>Making your first Phaser 3 Game - Part 10</title>
+    <script src="//cdn.jsdelivr.net/npm/phaser@3.50.1/dist/phaser.js"></script>
+    <style type="text/css">
+        body {
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+
+<script type="text/javascript">
+
+var config = {
+    type: Phaser.AUTO,
+    width: 1920,
+    height: 1080,
+    physics: {
+        default: 'arcade',
+        arcade: {
+            gravity: { y: 400 },
+            debug: false
+        }
+    },
+    scene: {
+        preload: preload,
+        create: create,
+        update: update
+    }
+};
+
+var player;
+var stars;
+var bombs;
+var platforms;
+var cursors;
+var score = 0;
+var gameOver = false;
+var jumps = 2
+var jumping = true
+
+var game = new Phaser.Game(config);
+
+function preload ()
+{
+    this.load.image('sky', 'assets/sky.png');
+    this.load.image('gb', 'assets/gb.png');
+    this.load.image('djump', 'assets/djump.png');
+    this.load.image('boisson', 'assets/Boisson.png');
+    this.load.image('ground', 'assets/platform.png');
+    //this.load.image('untruc', 'assets/platforms.png');
+    this.load.image('basG', 'assets/bas gauche.png');
+    this.load.image('basD', 'assets/bas droite.png');
+    this.load.image('murD', 'assets/mur droite.png');
+    this.load.image('solHD', 'assets/sol haut droite.png');
+    this.load.image('HGD', 'assets/haut gauche dev.png');
+    this.load.image('HG2', 'assets/haut gauche part 2.png');
+    this.load.image('plat', 'assets/plat.png');
+    this.load.image('PTD2', 'assets/plateforme droite part 2.png');
+    this.load.image('PTD', 'assets/plateforme droite.png');
+    this.load.image('HG', 'assets/haut gauche.png');
+    this.load.image('MB', 'assets/milieu bas.png');
+    this.load.image('plat', 'assets/plateforme.png');
+
+    this.load.image('plante', 'assets/plante.png');
+    this.load.image('bn', 'assets/bn.png');
+
+    this.load.image('star', 'assets/star.png');
+    this.load.image('bomb', 'assets/bomb.png');
+
+    this.load.image('cage', 'assets/cage.png');
+    this.load.image('piques', 'assets/pique.png');
+    this.load.image('piqueV', 'assets/piqueV.png');
+    this.load.spritesheet('dude', 'assets/dude.png', { frameWidth: 86, frameHeight: 120 });
+}
+
+function create ()
+{
+    //  A simple background for our game
+    this.cameras.main.setBounds(0, 0, 1920 * 3, 1080*2 );
+    this.physics.world.setBounds(0, 0, 1920 * 3, 1080*2  );
+
+    this.add.image(0, 0, 'sky').setOrigin(0,0).setScrollFactor(1);
+
+    //  The platforms group contains the ground and the 2 ledges we can jump on
+    platforms = this.physics.add.staticGroup();
+    ground = this.physics.add.staticGroup();
+
+    this.gb = this.physics.add.group();
+    this.djump = this.physics.add.group();
+    this.boisson = this.physics.add.group();
+    this.cage = this.physics.add.group();
+    this.ennemy = this.physics.add.group();
+    this.piques = this.physics.add.group();
+    
+
+    //  Here we create the ground.
+    //  Scale it to fit the width of the game (the original sprite is 400x32 in size)
+    //platforms.create(400, 568, 'ground').setScale(2).refreshBody();
+
+    //  Now let's create some ledges
+    //platforms.create(600, 400, 'ground');
+    //platforms.create(50, 250, 'ground');
+    //platforms.create(750, 220, 'ground');
+
+    ground.create(720, 2095, 'basG');
+    ground.create(5150, 2095, 'basD');
+    ground.create(5660, 1550, 'murD');
+    ground.create(3790, 1055, 'solHD');
+    ground.create(1060, 250, 'HGD');
+    ground.create(500, 900, 'HG2');
+    ground.create(5214, 1595, 'PTD2');
+    ground.create(5085, 1310, 'PTD');
+    ground.create(720, 1050, 'HG');
+    ground.create(2940, 2095, 'MB');
+    ground.create(650, 750, 'plat');
+    ground.create(1398, 1564, 'plateforme');
+    ground.create(1936, 1742, 'plateforme');
+    ground.create(2196, 677, 'plateforme');
+    ground.create(2726, 466, 'plateforme');
+    ground.create(3302, 250, 'plateforme');
+    ground.create(907, 1727, 'plateforme');
+
+    this.gb.create(5144 , 48, 'gb')
+    this.djump.create(2052 , 1592, 'djump')
+    this.boisson.create(3393 , 90, 'boisson')
+    this.boisson.create(5144 , 1358, 'boisson')
+    this.boisson.create(3551 , 1213, 'boisson')
+    this.boisson.create(436 , 1807, 'boisson')
+    this.boisson.create(186 , 688, 'boisson')
+    this.cage.create(5144, 48, 'cage')
+
+    this.ennemy.create(4538,1679,'plante');
+    this.ennemy.create(3711,611,'plante');
+    this.ennemy.create(2964,1771,'bn');
+
+    this.piques.create(4167,2074,'piques');
+    this.piques.create(3135,968,'piques');
+    this.piques.create(1456,2074,'piques');
+    this.piques.create(0,616,'piqueV');
+    this.piques.create(0,204,'piqueV');
+    this.piques.create(0,-175,'piqueV');
+    // The player and its settings
+    player = this.physics.add.sprite(100, 450, 'dude');
+    this.doubleJ = false
+
+    
+
+    this.physics.add.overlap(this.djump, player, recoltBonus, null, this)
+
+    this.physics.add.overlap(this.gb, player, enableHitting, null, this)
+
+    this.hitting = false
+    this.hurtbox = false
+
+    this.unlock = 0
+    this.physics.add.overlap(this.boisson, player, unlocking, null, this)
+
+    this.life = 3
+   
+
+    //  Player physics properties. Give the little guy a slight bounce.
+    player.setBounce(0.1);
+    player.setCollideWorldBounds(true);
+
+    //  Our player animations, turning, walking left and walking right.
+    this.anims.create({
+        key: 'right',
+        frames: this.anims.generateFrameNumbers('dude', { start: 0, end: 7 }),
+        frameRate: 10,
+        repeat: -1
+    });
+
+    this.anims.create({
+        key: 'turn',
+        frames: [ { key: 'dude', frame: 8 } ],
+        frameRate: 20
+    });
+
+    this.anims.create({
+        key: 'left',
+        frames: this.anims.generateFrameNumbers('dude', { start: 9, end: 16 }),
+        frameRate: 10,
+        repeat: 1
+    });
+
+    //  Input Events
+    cursors = this.input.keyboard.createCursorKeys();
+
+
+    
+    
+
+    //  Collide the player and the stars with the platforms
+    this.physics.add.collider(player, platforms);
+    this.physics.add.collider(player, this.cage);
+
+    
+    this.physics.add.collider(player, ground);
+    this.physics.add.collider(this.cage, ground);
+    this.physics.add.collider(this.ennemy, ground);
+    this.physics.add.collider(this.gb, ground);
+    this.physics.add.collider(this.djump, ground);
+    this.physics.add.collider(this.boisson, ground);
+    this.physics.add.collider(this.piques, ground);
+
+
+
+    this.physics.add.overlap(this.ennemy, player, hitEnnemy, null, this)
+    this.physics.add.overlap(this.piques, player, hitPiques, null, this)
+
+
+    this.cameras.main.startFollow(player, true);
+}
+
+function update ()
+{
+    hadDJ = true
+    this.hurtbox = false
+
+    if (gameOver)
+    {
+        return;
+    }
+
+    const touchingDown = player.body.touching.down
+
+    if (cursors.left.isDown)
+    {
+        player.setVelocityX(-560);
+
+        player.anims.play('left', true);
+    }
+    else if (cursors.right.isDown)
+    {
+        player.setVelocityX(560);
+
+        player.anims.play('right', true);
+    }
+    else
+    {
+        player.setVelocityX(0);
+
+        player.anims.play('turn');
+    }
+
+    if (cursors.up.isDown && player.body.touching.down)
+    {
+        player.setVelocityY(-730);
+    }
+    
+    if (cursors.up.isDown && jumping && jumps > 0)
+    {
+        player.setVelocityY(-400);
+        jumps--
+        jumping = false
+    }
+    
+    if (cursors.up.isUp)
+    {
+        jumping = true
+    }
+    
+    if (player.body.touching.down )
+    {
+        jumps = 1
+    }
+
+    else if (cursors.up.isDown && !touchingDown && this.doubleJ && hadDJ)
+		{
+			player.setVelocityY(-400);
+			player.anims.play('rightjump', true);
+			hadDJ = false;
+		}
+    else if(cursors.down.isDown && this.hitting)
+    {
+        player.anims.play();
+        this.hurtbox = true
+    }
+}
+
+function recoltBonus(){
+    this.djump.killAndHide(this.djump)
+
+    //this.physics.world.disableBody(this.djump.body)
+
+    this.doubleJ = true
+}
+function enableHitting(){
+    this.gb.killAndHide(this.gb)
+
+	//this.physics.world.disableBody(this.gb.body)
+
+    this.hitting = true
+}
+function unlocking(){
+    this.boisson.killAndHide(this.boisson)
+
+	//this.physics.world.disableBody(this.boisson.body)
+
+	this.unlock += 1
+
+    if (this.unlock == 5){
+        this.cage.killAndHide(this.cage)
+        this.physics.world.disableBody(this.cage)
+    }
+
+}
+function hitEnnemy(){
+    if (this.hurtbox){
+        this.ennemy.killAndHide(this.ennemy)
+
+		//this.physics.world.disableBody(this.ennemy.body)
+    }
+    else{
+        this.life -= 1
+        if (this.life == 0){
+            this.physics.pause();
+
+            gameOver = true;
+        }
+    }
+}
+function hitPiques(){
+    this.physics.pause();
+    gameOver = true;
+        
+}
+
+
+
+</script>
+
+</body>
+</html>
